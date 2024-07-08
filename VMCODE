@@ -1,0 +1,139 @@
+// vending_machine module definition
+module vending_machine(
+    output reg nw_pa,
+    input [1:0] coin,
+    input clk,
+    input rst
+);
+
+    reg [1:0] state, next_state;
+
+    // State Definitions
+    localparam [1:0] S0 = 2'b00;
+    localparam [1:0] S5 = 2'b01;
+    localparam [1:0] S10 = 2'b10;
+    localparam [1:0] S15 = 2'b11;
+
+    // State Register
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            state <= S0;
+        else
+            state <= next_state;
+    end
+
+    // Next State Logic
+    always @(*) begin
+        case (state)
+            S0: begin
+                if (coin == 2'b00)
+                    next_state = S0;
+                else if (coin == 2'b01)
+                    next_state = S5;
+                else if (coin == 2'b10)
+                    next_state = S10;
+                else
+                    next_state = S0;
+            end
+            S5: begin
+                if (coin == 2'b00)
+                    next_state = S5;
+                else if (coin == 2'b01)
+                    next_state = S10;
+                else if (coin == 2'b10)
+                    next_state = S15;
+                else
+                    next_state = S5;
+            end
+            S10: begin
+                if (coin == 2'b00)
+                    next_state = S10;
+                else if (coin == 2'b01)
+                    next_state = S15;
+                else if (coin == 2'b10)
+                    next_state = S15;
+                else
+                    next_state = S10;
+            end
+            S15: begin
+                next_state = S0;
+            end
+            default: begin
+                next_state = S0;
+            end
+        endcase
+    end
+
+    // Output Logic
+    always @(*) begin
+        case (state)
+            S0, S5, S10: nw_pa = 1'b0;
+            S15: nw_pa = 1'b1;
+            default: nw_pa = 1'b0;
+        endcase
+    end
+
+endmodule
+
+// Test bench module definition
+module vending_machine_tb;
+
+    reg [1:0] coin;   // Input: coin value
+    reg clk;          // Input: clock signal
+    reg rst;          // Input: reset signal
+    wire nw_pa;       // Output: output signal from vending machine
+
+    // Instantiate the vending machine module
+    vending_machine uut (
+        .nw_pa(nw_pa),
+        .coin(coin),
+        .clk(clk),
+        .rst(rst)
+    );
+
+    // Clock generation
+    always #5 clk = ~clk;
+
+    // Initial block for test bench
+    initial begin
+        // Initialize clock, reset, and coin inputs
+        clk = 0;
+        rst = 1;
+        coin = 2'b00;
+
+        // Reset the vending machine
+        #10;
+        rst = 0;
+
+        // Test sequence
+        // Insert coin of value 1 (01)
+        #10; coin = 2'b01;
+        #10; coin = 2'b00;
+
+        // Insert coin of value 2 (10)
+        #10; coin = 2'b10;
+        #10; coin = 2'b00;
+
+        // Insert coin of value 1 (01)
+        #10; coin = 2'b01;
+        #10; coin = 2'b00;
+
+        // Insert coin of value 1 (01)
+        #10; coin = 2'b01;
+        #10; coin = 2'b00;
+
+        // Insert coin of value 2 (10)
+        #10; coin = 2'b10;
+        #10; coin = 2'b00;
+
+        // Finish the simulation
+        #50;
+        $stop;
+    end
+
+    // Monitor the outputs during simulation
+    initial begin
+        $monitor("Time: %d, Coin: %b, State: %b, nw_pa: %b", $time, coin, uut.state, nw_pa);
+    end
+
+endmodule
